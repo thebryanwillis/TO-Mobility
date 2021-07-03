@@ -1,0 +1,40 @@
+install.packages("tidyverse")
+library(tidyverse)
+
+mobility <- read.csv(file.path("tmcs_2020_2029.csv"))
+mobility
+
+mobility = mobility %>% select(c(-count_id, -location_id, -centreline_type, -centreline_id, -px, -time_start, -time_end)) %>% mutate(year = str_sub(count_date,1,4))
+
+mobility2020 = mobility %>% filter(year == 2020) %>% mutate(sb_car_tot = sb_cars_l+sb_cars_r+sb_cars_t) %>% mutate(nb_car_tot = nb_cars_l+nb_cars_r+nb_cars_t) %>% mutate(wb_car_tot = wb_cars_l+wb_cars_r+wb_cars_t) %>% mutate(eb_car_tot = eb_cars_l+eb_cars_r+eb_cars_t) %>% mutate(sb_truck_tot = sb_truck_l+sb_truck_r+sb_truck_t) %>% mutate(nb_truck_tot = nb_truck_l+nb_truck_r+nb_truck_t) %>% mutate(eb_truck_tot = eb_truck_l+eb_truck_r+eb_truck_t) %>% mutate(wb_truck_tot = wb_truck_l+wb_truck_r+wb_truck_t) %>% mutate(sb_bus_tot = sb_bus_l+sb_bus_r+sb_bus_t) %>% mutate(nb_bus_tot = nb_bus_l+nb_bus_r+nb_bus_t) %>% mutate(eb_bus_tot = eb_bus_l+eb_bus_r+eb_bus_t) %>%mutate(wb_bus_tot = wb_bus_l+wb_bus_r+wb_bus_t) %>% select(-c(nx_other, sx_other, ex_other, wx_other))
+
+mobility2020 = mobility2020 %>% mutate(car_tot = sb_car_tot+nb_car_tot+eb_car_tot+wb_car_tot) %>% mutate(truck_tot = sb_truck_tot+nb_truck_tot+eb_truck_tot+wb_truck_tot) %>% mutate(bus_tot = sb_bus_tot+nb_bus_tot+eb_bus_tot+wb_bus_tot) %>% mutate(ped_tot = nx_peds+sx_peds+wx_peds+ex_peds) %>% mutate(bike_tot = nx_bike+sx_bike+ex_bike+wx_bike) %>% select(-c(sb_cars_r:wx_bike)) %>% mutate(month = str_sub(count_date,6,7))
+
+car = mobility2020 %>% group_by(month) %>% summarise(Cars =sum(car_tot)) 
+truck = mobility2020 %>% group_by(month) %>% summarise(Trucks = sum(truck_tot)) 
+bus = mobility2020 %>% group_by(month) %>% summarise(Buses = sum(bus_tot)) 
+ped = mobility2020 %>% group_by(month) %>% summarise(Peds = sum(ped_tot)) 
+bike = mobility2020 %>% group_by(month) %>% summarise(Bikes = sum(bike_tot))
+totals = car %>% full_join(truck, by =c("month" = "month"))
+totals = totals %>% full_join(bus, by =c("month" = "month"))
+totals = totals %>% full_join(ped, by =c("month" = "month"))
+totals = totals %>% full_join(bike, by =c("month" = "month"))
+totals = totals %>% pivot_longer(Cars:Bikes, names_to = "Mode")
+totals
+
+ggplot(totals, aes(month, value, group=Mode, colour=Mode))+geom_line()+ggtitle("Mode Share for Toronto (2020)")
+
+car_loc = mobility2020 %>% group_by(location) %>% summarise(Cars=sum(car_tot))
+truck_loc = mobility2020 %>% group_by(location) %>% summarise(Trucks=sum(truck_tot))
+bus_loc = mobility2020 %>% group_by(location) %>% summarise(Buses=sum(bus_tot))
+bike_loc = mobility2020 %>% group_by(location) %>% summarise(Bikes=sum(bike_tot))
+ped_loc = mobility2020 %>% group_by(location) %>% summarise(Peds=sum(ped_tot))
+total_loc = car_loc %>% full_join(truck_loc, by =c("location" = "location"))
+total_loc = total_loc %>% full_join(bus_loc, by =c("location" = "location"))
+total_loc = total_loc %>% full_join(ped_loc, by =c("location" = "location"))
+total_loc = total_loc %>% full_join(bike_loc, by =c("location" = "location"))
+total_loc = total_loc %>% mutate(Total = Cars+Trucks+Buses+Peds+Bikes)
+top_loc = total_loc %>% arrange(desc(Total)) %>% filter(row_number()==1)
+bot_loc = total_loc %>% arrange(Total) %>% filter(row_number()==1)
+locs = rbind(top_loc, bot_loc)
+locs
