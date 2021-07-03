@@ -40,7 +40,23 @@ totals
 ```
 
 ```{r}
-ggplot(totals, aes(month, value, group=Mode, colour=Mode))+geom_line()
+ggplot(totals, aes(month, value, group=Mode, colour=Mode))+geom_line()+ggtitle("Mode Share for Toronto (2020)")
+```
+```{r}
+car_loc = mobility2020 %>% group_by(location) %>% summarise(Cars=sum(car_tot))
+truck_loc = mobility2020 %>% group_by(location) %>% summarise(Trucks=sum(truck_tot))
+bus_loc = mobility2020 %>% group_by(location) %>% summarise(Buses=sum(bus_tot))
+bike_loc = mobility2020 %>% group_by(location) %>% summarise(Bikes=sum(bike_tot))
+ped_loc = mobility2020 %>% group_by(location) %>% summarise(Peds=sum(ped_tot))
+total_loc = car_loc %>% full_join(truck_loc, by =c("location" = "location"))
+total_loc = total_loc %>% full_join(bus_loc, by =c("location" = "location"))
+total_loc = total_loc %>% full_join(ped_loc, by =c("location" = "location"))
+total_loc = total_loc %>% full_join(bike_loc, by =c("location" = "location"))
+total_loc = total_loc %>% mutate(Total = Cars+Trucks+Buses+Peds+Bikes)
+top_loc = total_loc %>% arrange(desc(Total)) %>% filter(row_number()==1)
+bot_loc = total_loc %>% arrange(Total) %>% filter(row_number()==1)
+locs = rbind(top_loc, bot_loc)
+locs
 ```
 
 
